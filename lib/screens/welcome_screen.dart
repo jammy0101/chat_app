@@ -1,3 +1,4 @@
+import 'package:chat_app/RoundedButtons/roundedButton.dart';
 import 'package:chat_app/screens/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
@@ -28,7 +29,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
     //     parent: controller,
     //     curve: Curves.bounceOut,
     // );
-    controller.forward();
     // animation.addStatusListener((status){
     //   if(status == AnimationStatus.completed){
     //     controller.reverse(from: 1.0);
@@ -36,6 +36,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
     //     controller.forward();
     //   }
     // });
+    controller.forward();
     controller.addListener((){
       setState(() {
 
@@ -85,41 +86,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
             SizedBox(
               height: 48.0,
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0),
-              child: Material(
-                elevation: 5.0,
+            RoundedButton(
+                title: 'Log In',
                 color: Colors.lightBlueAccent,
-                borderRadius: BorderRadius.circular(30.0),
-                child: MaterialButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, LoginScreen.id);
-                  },
-                  minWidth: 200.0,
-                  height: 42.0,
-                  child: Text(
-                    'Log In',
-                  ),
-                ),
-              ),
+                onPressed: (){
+                  Navigator.pushNamed(context, LoginScreen.id);
+                }
             ),
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0),
-              child: Material(
+            RoundedButton(
+                title: 'Register',
                 color: Colors.blueAccent,
-                borderRadius: BorderRadius.circular(30.0),
-                elevation: 5.0,
-                child: MaterialButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, RegistrationScreen.id);
-                  },
-                  minWidth: 200.0,
-                  height: 42.0,
-                  child: Text(
-                    'Register',
-                  ),
-                ),
-              ),
+                onPressed: (){
+                  Navigator.pushNamed(context, RegistrationScreen.id);
+                }
             ),
           ],
         ),
