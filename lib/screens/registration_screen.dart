@@ -1,4 +1,6 @@
 import 'package:chat_app/RoundedButtons/roundedButton.dart';
+import 'package:chat_app/screens/chat_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'constants.dart';
@@ -9,7 +11,12 @@ class RegistrationScreen extends StatefulWidget {
   _RegistrationScreenState createState() => _RegistrationScreenState();
 }
 
+
 class _RegistrationScreenState extends State<RegistrationScreen> {
+  late String email;
+  late String password;
+  bool loading = false;
+   final FirebaseAuth auth = FirebaseAuth.instance;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,7 +39,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ),
             TextField(
               onChanged: (value) {
-                //Do something with the user input.
+                email = value;
               },
               decoration: KEmailTextFieldDecoration.copyWith(hintText: 'Enter the Email'),
             ),
@@ -41,18 +48,36 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ),
             TextField(
               onChanged: (value) {
-                //Do something with the user input.
+               password = value;
               },
               decoration: KPasswordTextFieldDecoration,
             ),
             SizedBox(
               height: 24.0,
             ),
-            RoundedButton(
+           loading ? Center(child: CircularProgressIndicator()) : RoundedButton(
                 title: 'Register',
                 color: Colors.blueAccent,
-                onPressed: (){
-                  // Implement registration functionality.
+                onPressed: ()async{
+                  try{
+                   setState(() {
+                     loading = true;
+                   });
+                    final  newUser  = await  auth.createUserWithEmailAndPassword(
+                        email: email,
+                        password: password
+                    );
+                    if(newUser != null){
+                      Navigator.pushNamed(context, ChatScreen.id);
+                    }
+                  }catch(e){
+
+                    print(e);
+                  }finally{
+                    setState(() {
+                      loading = false;
+                    });
+                  }
                 }
             ),
           ],
