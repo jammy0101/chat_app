@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'constants.dart';
+final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
 class ChatScreen extends StatefulWidget {
   static const String id = 'chat_screen';
@@ -14,7 +15,8 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final FirebaseAuth auth = FirebaseAuth.instance;
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final messageTextController = TextEditingController();
+
   User? loggedInUser;
   late String messageText;
 
@@ -48,16 +50,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // void getMessages()async{
-  //   try{
-  //     final messages = await firestore.collection('messages').get();
-  //     for(var message in messages.docs){
-  //       print(message.data());
-  //     }
-  //   }catch(e){
-  //     print('Error : $e');
-  //   }
-  // }
 
   void messageStream()async{
     await for(var snapshot in firestore.collection('messages').snapshots()){
@@ -91,42 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: firestore.collection('messages').snapshots(),
-                builder: (context, snapshot) {
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    // Show loader when waiting for data
-                    return Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Something went wrong'));
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    // Show message when there is no chat data
-                    return Center(child: Text('No messages yet'));
-                  }
-
-                  final messages = snapshot.data!.docs;
-                  List<Text> messageWidgets = [];
-
-                  for (var message in messages) {
-                    final messageText = message['text'];
-                    final messageSender = message['sender'];
-                    final messageWidget = Text('$messageText from $messageSender');
-                    messageWidgets.add(messageWidget);
-                  }
-
-                  return ListView(
-                    padding: EdgeInsets.all(8),
-                    children: messageWidgets,
-                  );
-                },
-              ),
-            ),
+            MessageStream(),
             Container(
               decoration: kMessageContainerDecoration,
               child: Padding(
@@ -136,6 +93,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: <Widget>[
                     Expanded(
                       child: TextField(
+                        controller : messageTextController,
                           onChanged: (value) {
                             messageText = value;
                           },
@@ -144,10 +102,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     InkWell(
                       onTap: (){
+                        messageTextController.clear();
                         putMessages();
                       },
                       child: Text('Send',
-                          style: kSendButtonTextStyle
+                          style: kSendButtonTextStyle,
                       ),
                     )
                   ],
@@ -157,6 +116,83 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class MessageStream extends StatelessWidget {
+  const MessageStream({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return   Expanded(
+      child: StreamBuilder<QuerySnapshot>(
+        stream: firestore.collection('messages').snapshots(),
+        builder: (context, snapshot) {
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // Show loader when waiting for data
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Something went wrong'));
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            // Show message when there is no chat data
+            return Center(child: Text('No messages yet'));
+          }
+
+          final messages = snapshot.data!.docs;
+          List<MessageBubble> messageBubbles = [];
+          for (var message in messages) {
+            final messageText = message['text'];
+            final messageSender = message['sender'];
+            final messageBubble = MessageBubble( sender: messageSender,text: messageText,);
+            messageBubbles.add(messageBubble);
+          }
+          return ListView(
+            padding: EdgeInsets.symmetric(horizontal: 10,vertical: 10),
+            children: messageBubbles,
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+class MessageBubble extends StatelessWidget {
+  final String sender;
+  final String text;
+  const MessageBubble({
+    super.key,
+    required this.text,
+    required this.sender,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return  Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(sender,style: TextStyle(fontSize: 12,color: Colors.black45),),
+          Material(
+            elevation: 6.0,
+            color: Colors.lightBlueAccent,
+            borderRadius: BorderRadius.circular(30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 17),
+              child: Text(
+                text,style: TextStyle(color: Colors.white,fontSize: 19),
+              ),
+            ),
+          ),
+        ],
+      )
     );
   }
 }
