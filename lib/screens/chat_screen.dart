@@ -1,12 +1,11 @@
 import 'package:chat_app/screens/welcome_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'constants.dart';
 final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
+User? loggedInUser;
 class ChatScreen extends StatefulWidget {
   static const String id = 'chat_screen';
   @override
@@ -16,8 +15,6 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final messageTextController = TextEditingController();
-
-  User? loggedInUser;
   late String messageText;
 
   @override
@@ -43,19 +40,12 @@ class _ChatScreenState extends State<ChatScreen> {
       final data = await  firestore.collection('messages').add({
         'text' : messageText,
         'sender' : loggedInUser!.email,
+        'timestamp': FieldValue.serverTimestamp(),
+
       });
       print(data);
     }catch(e){
       print('Error $e');
-    }
-  }
-
-
-  void messageStream()async{
-    await for(var snapshot in firestore.collection('messages').snapshots()){
-      for(var message in snapshot.docs){
-              print(message.data());
-            }
     }
   }
 
@@ -65,14 +55,13 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: null,
+        centerTitle: true,
         actions: <Widget>[
           IconButton(
               icon: Icon(Icons.close),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               Navigator.pushNamedAndRemoveUntil(context, WelcomeScreen.id, (route) => false);
-              // getMessages();
-              messageStream();
             },),
         ],
         title: Text('⚡️Chat'),
@@ -127,32 +116,35 @@ class MessageStream extends StatelessWidget {
   Widget build(BuildContext context) {
     return   Expanded(
       child: StreamBuilder<QuerySnapshot>(
-        stream: firestore.collection('messages').snapshots(),
+        stream: firestore.collection('messages').orderBy('timestamp', descending: true).snapshots(),
         builder: (context, snapshot) {
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             // Show loader when waiting for data
             return Center(child: CircularProgressIndicator());
           }
-
           if (snapshot.hasError) {
             return Center(child: Text('Something went wrong'));
           }
-
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             // Show message when there is no chat data
             return Center(child: Text('No messages yet'));
           }
-
           final messages = snapshot.data!.docs;
           List<MessageBubble> messageBubbles = [];
           for (var message in messages) {
             final messageText = message['text'];
             final messageSender = message['sender'];
-            final messageBubble = MessageBubble( sender: messageSender,text: messageText,);
+
+            final currentUser = loggedInUser!.email;
+            final messageBubble = MessageBubble(
+              sender: messageSender,
+              text: messageText,
+              isMe: currentUser == messageSender,
+            );
             messageBubbles.add(messageBubble);
           }
           return ListView(
+            reverse: true,
             padding: EdgeInsets.symmetric(horizontal: 10,vertical: 10),
             children: messageBubbles,
           );
@@ -166,10 +158,12 @@ class MessageStream extends StatelessWidget {
 class MessageBubble extends StatelessWidget {
   final String sender;
   final String text;
+  final bool isMe;
   const MessageBubble({
     super.key,
     required this.text,
     required this.sender,
+    required this.isMe,
   });
 
   @override
@@ -177,17 +171,25 @@ class MessageBubble extends StatelessWidget {
     return  Padding(
       padding: const EdgeInsets.all(10.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Text(sender,style: TextStyle(fontSize: 12,color: Colors.black45),),
           Material(
             elevation: 6.0,
-            color: Colors.lightBlueAccent,
-            borderRadius: BorderRadius.circular(30),
+            color: isMe  ? Colors.lightBlueAccent : Colors.white,
+            borderRadius: isMe ? BorderRadius.only(
+                topLeft: Radius.circular(30.0),
+                bottomLeft: Radius.circular(30.0),
+                bottomRight: Radius.circular(30.0))
+                : BorderRadius.only( bottomLeft: Radius.circular(30.0),
+                bottomRight: Radius.circular(30.0),
+              topRight: Radius.circular(30.0),
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 17),
+              padding: const EdgeInsets.symmetric(horizontal: 10.0,vertical: 10),
               child: Text(
-                text,style: TextStyle(color: Colors.white,fontSize: 19),
+                text,style: TextStyle(color: isMe ? Colors.white : Colors.black54,fontSize: 19),
               ),
             ),
           ),
